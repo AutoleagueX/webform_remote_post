@@ -23,11 +23,7 @@ function webform_remote_post_schema() {
       ),
       'tid' => array(
         'description' => 'The URL target identifier.',
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'size' => 'small',
-        'not null' => TRUE,
-        'default' => 0,
+        'type' => 'serial',
       ),
       'url' => array(
         'description' => 'The http address that will be used to post upon submission.',
@@ -50,24 +46,30 @@ function webform_remote_post_schema() {
         'description' => 'The type of content to send remotely.',
         'type' => 'text',
         'not null' => FALSE,
-      ),      
+      ),
     ),
     'primary key' => array('nid', 'tid'),
+    'indexes' => array(
+      'nid' => array('nid'),
+      'tid' => array('tid'),
+      'nid_tid' => array('nid',' tid'),
+    ),
   );
 
   return $schema;
 }
 
-
+/**
+ * Implements hook_install().
+ */
+function webform_remote_post_install() {
+  drupal_install_schema('webform_remote_post');
+}
 
 /**
- * First update for the post type
+ * Implements hook_uninstall().
  */
-function webform_remote_post_update_7100(&$sandbox) {
-  $new_field = array(
-    'description' => 'The type of content to send remotely.',
-    'type' => 'text',
-    'not null' => FALSE,
-  );    
-  db_add_field('webform_remote_post_targets', 'type', $new_field);
+function webform_remote_post_uninstall() {
+  // Drop tables.
+  drupal_uninstall_schema('webform_remote_post');
 }

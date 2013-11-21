@@ -1,12 +1,12 @@
 
 -- SUMMARY --
 
-Webform Remote Post is a module that works along the Webform module. It eases
-the integration between Webforms and other web applications by extending the
-out-of-the-box functionality if the Webform module.
+Webform Remote Post works along with the Webform module to ease the integration
+between Webforms and other web applications by extending the out-of-the-box
+functionality if the Webform module.
 
 Webform Remote Post works by POSTing form submissions to any arbitrary URL,
-presumably, an application or script that will use the form data and perform
+presumably an application or script that will use the form data and perform
 further processing of it. It respects the form's validation and will only send
 submissions that passed validation and are no longer in a draft state. Multiple
 remote posts can be setup for each individual form, allowing for the submission
@@ -16,7 +16,7 @@ of data to multiple systems at once.
 
 Webform module: http://drupal.org/project/webform
 
-The module was developed against the 7.x-3.18 version fo Webform, but it should
+The module was developed against the 6.x-3.19 version fo Webform, but it should
 work with previous versions as long as they include the
 hook_webform_submission_insert() hook definition.
 
@@ -24,23 +24,21 @@ hook_webform_submission_insert() hook definition.
 -- INSTALLATION --
 
 * Install as usual, see
-  http://drupal.org/documentation/install/modules-themes/modules-7 for further
-  information.
+  https://drupal.org/documentation/install/modules-themes/modules-5-6.
 
 
 -- CONFIGURATION --
 
-* Configure user permissions in Administration » People » Permissions:
+* Configure user permissions in Administer » Permissions:
 
-  - Admin webform remote posts
+  - admin webform remote posts
 
-    Users in roles with the "Display drupal links" permission will be able
-    to see the "Remote Posts" edit section of a webform. Here, they can
-    add more targets, remove them or disable them.
+    Users in roles with the "admin webform remote posts" permission will be able
+    to view the "Remote Posts" page of a webform where they can add, remove, and
+    disable remote post targets.
 
-  Note that the sending of data to remote targets is not affected by this
-  permission. In fact, if your form is accessible to anonymous users,
-  filling out the form and submitting it will trigger the remote form
+  Note that sending data to remote targets is not affected by this permission.
+  Submitting a valid form is sufficient to trigger the remote form
   submission.
 
 * Customize the remote posts settings on on a per-webform basis:

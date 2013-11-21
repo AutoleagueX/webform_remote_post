@@ -6,60 +6,53 @@
  */
 
 /**
- * An overview of the URL repost targets associated with a given form.
+ * List remote post targets associated with a given webform.
  */
-function webform_remote_post_targets_form($form, &$form_state, $webform_node) {
+function webform_remote_post_targets_form($form_state, $node) {
+  // Adds the node object to the $form array.
+  $form['#node'] = $node;
 
-  $form['#tree'] = TRUE;
-  $form['#node'] = $webform_node;
-
-  // Internal to the form and never displayed to the screen.
+  // Adds the webform Node ID to the form.
   $form['nid'] = array(
     '#type' => 'value',
-    '#value' => $webform_node->nid,
+    '#value' => $node->nid,
   );
 
+  // Retrieves the associated remote post targets from the database.
+  $query = db_query('SELECT * FROM {webform_remote_post_targets} WHERE nid = %d', $node->nid);
+
+  // Constructs an array of associated remote post targets indexed by Target ID.
   $targets = array();
+  while ($target = db_fetch_array($query)) {
+    $targets[$target['tid']] = $target;
+  }
 
-  $targets = db_select('webform_remote_post_targets')
-    ->fields('webform_remote_post_targets')
-    ->condition('nid', $webform_node->nid)
-    ->execute()
-    ->fetchAllAssoc('tid', PDO::FETCH_ASSOC);
-
+  // Constructs a form from the array of associated remote post targets.
   foreach ($targets as $tid => $data) {
+    $status = ($data['enabled'] ? t('Enabled') : t('Disabled'));
     $form['targets'][$tid]['status'] = array(
-      '#type' => 'checkbox',
-      '#default_value' => $data['enabled'],
-      '#ajax' => array(
-        'callback' => 'webform_remote_post_update_enabled_flag',
-        'wrapper' => 'enabled_flag_' . $tid,
-      ),
-      '#prefix' => '<div id="enabled_flag_' . $tid . '">',
-      '#suffix' => '</div>',
+      '#value' => check_plain($status),
     );
     $form['targets'][$tid]['label'] = array(
-      '#markup' => check_plain($data['label']),
+      '#value' => check_plain($data['label']),
     );
     $form['targets'][$tid]['url'] = array(
-      '#markup' => check_plain($data['url']),
+      '#value' => check_plain($data['url']),
     );
-   $form['targets'][$tid]['type'] = array(
-      '#markup' => check_plain($data['type']),
+    $form['targets'][$tid]['type'] = array(
+      '#value' => check_plain($data['type']),
     );
   }
 
-  // Form elements for a new remote post target. Actually rendered by
-  // the theme_webform_remote_post_targets_form function below.
+  // Constructs a form for adding a new remote post target.
   $form['add']['label'] = array(
     '#type' => 'textfield',
     '#title' => t('Label'),
     '#description' => t('The name of the remote system as displayed in the table above. E.g. "My CRM system"'),
     '#size' => 20,
     '#maxlength' => 60,
-    '#required' => FALSE,
+    '#required' => TRUE,
   );
-
   $form['add']['url'] = array(
     '#type' => 'textfield',
     '#title' => t('Target URL'),
@@ -72,20 +65,18 @@ function webform_remote_post_targets_form($form, &$form_state, $webform_node) {
     '#type' => 'select',
     '#title' => t('Post Type'),
     '#options' => array(
-       'x-www-form-urlencoded' => t('x-www-form-urlencoded'),
-       'json' => t('JSON'),
+      'x-www-form-urlencoded' => t('x-www-form-urlencoded'),
+      'json' => t('JSON'),
     ),
     '#default_value' => 'x-www-form-urlencoded',
-    '#description' => t('Use x-www-form-urlencoded if unsure, as it is the default format for HTML forms. You also have the option to post data in <a href="http://www.json.org/" target="_blank">JSON</a> format.'),
+    '#description' => t('Use x-www-form-urlencoded if unsure, as it is the default format for HTML forms. You also have the option to post data in <a href="@url" target="_blank">JSON</a> format.', array('@url' => url('http://www.json.org/', array('external' => TRUE)))),
     '#required' => TRUE,
   );
-  $form['add_button'] = array(
+  $form['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Add'),
     '#weight' => 45,
   );
-
-  $form['#validate'] = array('webform_remote_post_target_validate');
 
   return $form;
 }
@@ -93,131 +84,156 @@ function webform_remote_post_targets_form($form, &$form_state, $webform_node) {
 /**
  * Theme the node components form. Use a table to organize the components.
  *
- * @param array $variables
- *   An array representing the form, with these keys:
- *   - form: the form array.
+ * @param array $form
+ *   An array representing the form.
  *
  * @return array
  *   Formatted HTML form, ready for display.
  */
-function theme_webform_remote_post_targets_form($variables) {
-  $form = $variables['form'];
-  $webform_node = $form['#node'];
-  $header = array(t('Enabled'), t('Label'), t('Target URL'), t('Post Type'), t('Operations'));
-  $rows = array();
+function theme_webform_remote_post_targets_form($form) {
+  // Constructs an array of table header values.
+  $header = array(
+    t('Status'),
+    t('Label'),
+    t('Target URL'),
+    t('Post Type'),
+    t('Operations'),
+  );
 
+  // Constructs an array of table row values.
+  $rows = array();
   if (!empty($form['targets'])) {
     foreach (element_children($form['targets']) as $tid) {
-      // Add each target to a table row.
+      // Adds each remote post target to a table row.
+      $update = ($form['targets'][$tid]['status']['#value'] == 'Enabled' ? t('Disable') : t('Enable'));
       $rows[] = array(
         drupal_render($form['targets'][$tid]['status']),
         drupal_render($form['targets'][$tid]['label']),
         drupal_render($form['targets'][$tid]['url']),
         drupal_render($form['targets'][$tid]['type']),
-        l(t('Delete'), 'node/' . $webform_node->nid . '/webform/targets/' . $tid . '/delete'),
+        l($update, 'node/' . $form['#node']->nid . '/webform/targets/' . $tid . '/' . strtolower($update)),
+        l(t('Delete'), 'node/' . $form['#node']->nid . '/webform/targets/' . $tid . '/delete'),
       );
     }
   }
   else {
-    $rows[] = array(array('data' => t('No remote target URLs specified yet. Add a target URL below.'), 'colspan' => 5));
+    $rows[] = array(array('data' => t('No remote target URLs specified yet. Add a target URL below.'), 'colspan' => 6));
   }
 
-  // Add a row containing form elements for a new item.
+  // Adds a row containing form elements for a new remote post target.
   $row_data = array(
-    array('colspan' => 4, 'data' => drupal_render($form['add'])),
+    array('colspan' => 5, 'data' => drupal_render($form['add'])),
     array('colspan' => 1, 'data' => drupal_render($form['add_button'])),
   );
   $rows[] = array('data' => $row_data, 'class' => array('webform-remote-post-add-target-form'));
 
-  $output = '';
-  $output .= theme('table', array(
-    'header' => $header,
-    'rows' => $rows,
-    'attributes' => array('id' => 'webform-remote-post-targets')));
-  $output .= drupal_render_children($form);
+  $output = theme('table', $header, $rows);
+
+  foreach (element_children($form) as $key) {
+    if (!empty($form[$key])) {
+      $output .= drupal_render($form[$key]);
+    }
+  }
+
   return $output;
 }
 
 /**
- * Validate handler for webform_remote_post_targets_form().
+ * Validation handler for webform_remote_post_targets_form().
  */
-function webform_remote_post_target_validate($form, &$form_state) {
-  if (!valid_url($form_state['values']['add']['url'])) {
-    $url = trim($form_state['values']['add']['url']);
-    form_set_error('url', t('The entered URL "@url" does not appear valid.', array('@url' => $url)));
+function webform_remote_post_targets_form_validate($form, &$form_state) {
+  if (!valid_url(trim($form_state['values']['url']))) {
+    $url = trim($form_state['values']['url']);
+    form_set_error('url', t('The supplied URL "@url" does not appear valid.', array('@url' => $url)));
   }
 }
 
 /**
- * Submit handler for webform_remote_post_forwards_form().
+ * Submission handler for webform_remote_post_forwards_form().
  */
 function webform_remote_post_targets_form_submit($form, &$form_state) {
-  $target = array();
-  if (!empty($form_state['values']['add']['label'])) {
-    $target['label'] = trim($form_state['values']['add']['label']);
-  }
+  // Constructs the remote post target object.
+  $target = new stdClass();
+  $target->nid = trim($form_state['values']['nid']);
+  $target->url = trim($form_state['values']['url']);
+  $target->label = trim($form_state['values']['label']);
+  $target->type = trim($form_state['values']['type']);
 
-  $target['url'] = trim($form_state['values']['add']['url']);
-  $target['nid'] = trim($form_state['values']['nid']);
-  $target['type'] = trim($form_state['values']['add']['type']);
-
-  // TODO: Like in webform, this is not race-condition safe.
-  // Switch to using transactions as well?
-  $next_id_query = db_select('webform_remote_post_targets')->condition('nid', $target['nid']);
-  $next_id_query->addExpression('MAX(tid) + 1', 'tid');
-  $target['tid'] = $next_id_query->execute()->fetchField();
-  if ($target['tid'] == NULL) {
-    $target['tid'] = 1;
-  }
-
+  // Writes the remote post target object to the database.
   $success = drupal_write_record('webform_remote_post_targets', $target);
 
-  // Write a log if we weren't able to save the target successfully.
+  // Logs unsuccessful updates.
   if ($success === FALSE) {
     watchdog('webform_remote_post', 'There was an error writing a new remote post target to the database.', array(), WATCHDOG_ERROR);
+    drupal_set_message(t('The remote post target could not be created.'), 'error');
+  }
+  else {
+    drupal_set_message(t('The remote post target was successfully created.'));
   }
 }
 
 /**
- * Submit handler for webform_remote_post_target_delete_form().
+ * Page callback for enabling and disabling remote post targets.
+ *
+ * @param array $form_state
+ *   A keyed array containing the current state of the form.
+ *
+ * @param object $node
+ *   The node object passed by webform_menu_load().
+ *
+ * @param int $tid
+ *   The Target ID passed into the URL.
+ *
+ * @param string $flag
+ *   The requested state passed into the URL.
  */
-function webform_remote_post_target_delete_form_submit($form, &$form_state, $webform_mode, $target_id) {
+function webform_remote_post_targets_update($form_state, $node, $tid, $flag) {
+  // Converts $flag to an integer representing the requested state.
+  $flag = ($flag == 'enable' ? 1 : 0);
 
-  // Delete the target entry.
-  db_delete('webform_remote_post_targets')
-    ->condition('nid', $webform_mode->nid)
-    ->condition('tid', $target_id)
-    ->execute();
+  // Constructs the remote post target object.
+  $target = new stdClass();
+  $target->nid = $node->nid;
+  $target->tid = $tid;
+  $target->enabled = $flag;
 
-  drupal_set_message(t('Remote post target deleted.'));
-  drupal_goto('node/' . $webform_mode->nid . '/webform/targets');
+  // Updates the remote post target's database record.
+  $success = drupal_write_record('webform_remote_post_targets', $target, array('nid', 'tid'));
+
+  // Logs unsuccessful updates.
+  if ($success === FALSE) {
+    watchdog('webform_remote_post', 'There was an error updating a remote post target.', array(), WATCHDOG_ERROR);
+    drupal_set_message(t('The remote post target could not be updated.'), 'error');
+  }
+  else {
+    drupal_set_message(t('The remote post target was successfully updated.'));
+    drupal_goto('node/' . $node->nid . '/webform/targets');
+  }
 }
 
 /**
- * Callback for target enabled flag.
+ * Page callback for deleting remote post targets.
  *
- * @return array
- *   The textfield element renderable array
+ * @param array $form_state
+ *   A keyed array containing the current state of the form.
+ *
+ * @param object $node
+ *   The node object passed by webform_menu_load().
+ *
+ * @param int $tid
+ *   The Target ID passed into the URL.
  */
-function webform_remote_post_update_enabled_flag($form, $form_state) {
-  // The form has already been submitted and updated. We can return the replaced
-  // item as it is.
-  // Looks like we can use $form_state['triggering_element'] to tell which
-  // target to change:
-  // $form_state['triggering_element']['value'] has the new value to set.
-  // $form_state['values']['nid'] has the webform ID to chage.
-  // What's the best place to get the target ID from? Best guess right now
-  // is $form_state['triggering_element']['array_parents'][1] :-/
-  $target_id = $form_state['triggering_element']['#array_parents'][1];
+function webform_remote_post_targets_delete($form_state, $node, $tid) {
+  // Deletes the remote post target's database record.
+  $success = db_query('DELETE FROM {webform_remote_post_targets} WHERE nid = %d AND tid = %d', $node->nid, $tid);
 
-  // Update the remote post target:
-  db_update('webform_remote_post_targets')
-    ->fields(array(
-      'enabled' => $form_state['triggering_element']['#value'],
-    ))
-    ->condition('nid', $form_state['values']['nid'])
-    ->condition('tid', $target_id)
-    ->execute();
-
-  return $form['targets'][$target_id]['status'];
+  // Logs unsuccessful updates.
+  if ($success === FALSE) {
+    watchdog('webform_remote_post', 'There was an error deleting a remote post target.', array(), WATCHDOG_ERROR);
+    drupal_set_message(t('The remote post target could not be deleted.'), 'error');
+  }
+  else {
+    drupal_set_message(t('The remote post target was successfully deleted.'));
+    drupal_goto('node/' . $node->nid . '/webform/targets');
+  }
 }
