@@ -117,7 +117,7 @@ function webform_remote_post_webform_submission_insert($node, $submission) {
   // array of form field names and the data.
   $payload = array();
   foreach ($submission->data as $cid => $component_data) {
-    $payload[$component_map[$cid]['form_key']] = implode(', ', $component_data);
+    $payload[$component_map[$cid]['form_key']] = implode(', ', $component_data['value']);
   }
 
   // Acceptable server response codes.
