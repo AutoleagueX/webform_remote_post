@@ -125,6 +125,8 @@ function webform_remote_post_webform_submission_insert($node, $submission) {
 
   // Repost data to each target.
   foreach ($targets as $tid => $target) {
+    // Allow other modules to modify payload and target.
+    drupal_alter('webform_remote_post_repost', $payload, $target);
 
     if($target['type'] == 'json'){
       // JSON Encode the payload.
