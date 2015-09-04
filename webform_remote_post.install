@@ -50,7 +50,19 @@ function webform_remote_post_schema() {
         'description' => 'The type of content to send remotely.',
         'type' => 'text',
         'not null' => FALSE,
-      ),      
+      ),
+      'mode' => array(
+        'description' => 'POST pre or post save?',
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 1,
+      ),
+      'extra' => array(
+        'description' => 'Extra fields to include in POST.',
+        'type' => 'text',
+        'not null' => FALSE,
+      ),
     ),
     'primary key' => array('nid', 'tid'),
   );
@@ -68,6 +80,30 @@ function webform_remote_post_update_7100(&$sandbox) {
     'description' => 'The type of content to send remotely.',
     'type' => 'text',
     'not null' => FALSE,
-  );    
+  );
   db_add_field('webform_remote_post_targets', 'type', $new_field);
+}
+
+/**
+ * Add mode and extra fields
+ */
+function webform_remote_post_update_7200() {
+  $new_fields = array(
+    'mode' => array(
+      'description' => 'POST pre or post save?',
+      'type' => 'int',
+      'size' => 'tiny',
+      'not null' => TRUE,
+      'default' => 1,
+    ),
+    'extra' => array(
+      'description' => 'Extra fields to include in POST.',
+      'type' => 'text',
+      'not null' => FALSE,
+    ),
+  );
+
+  foreach ($new_fields as $field => $schema) {
+    db_add_field('webform_remote_post_targets', $field, $schema);
+  }
 }

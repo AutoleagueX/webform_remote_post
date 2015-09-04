@@ -15,7 +15,7 @@ function webform_remote_post_targets_form($form, &$form_state, $webform_node) {
 
   // Internal to the form and never displayed to the screen.
   $form['nid'] = array(
-    '#type' => 'value',
+    '#type'  => 'value',
     '#value' => $webform_node->nid,
   );
 
@@ -29,14 +29,14 @@ function webform_remote_post_targets_form($form, &$form_state, $webform_node) {
 
   foreach ($targets as $tid => $data) {
     $form['targets'][$tid]['status'] = array(
-      '#type' => 'checkbox',
+      '#type'          => 'checkbox',
       '#default_value' => $data['enabled'],
-      '#ajax' => array(
+      '#prefix'        => '<div id="enabled_flag_' . $tid . '">',
+      '#suffix'        => '</div>',
+      '#ajax'          => array(
         'callback' => 'webform_remote_post_update_enabled_flag',
-        'wrapper' => 'enabled_flag_' . $tid,
+        'wrapper'  => 'enabled_flag_' . $tid,
       ),
-      '#prefix' => '<div id="enabled_flag_' . $tid . '">',
-      '#suffix' => '</div>',
     );
     $form['targets'][$tid]['label'] = array(
       '#markup' => check_plain($data['label']),
@@ -47,41 +47,34 @@ function webform_remote_post_targets_form($form, &$form_state, $webform_node) {
    $form['targets'][$tid]['type'] = array(
       '#markup' => check_plain($data['type']),
     );
+   $form['targets'][$tid]['mode'] = array(
+      '#markup' => ($data['mode'] == WEBFORM_REMOTE_POST_MODE_PRE) ? t('Pre-save') : t('Post-save'),
+    );
   }
 
   // Form elements for a new remote post target. Actually rendered by
   // the theme_webform_remote_post_targets_form function below.
   $form['add']['label'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Label'),
+    '#type'        => 'textfield',
+    '#title'       => t('Label'),
     '#description' => t('The name of the remote system as displayed in the table above. E.g. "My CRM system"'),
-    '#size' => 20,
-    '#maxlength' => 60,
-    '#required' => FALSE,
+    '#size'        => 20,
+    '#maxlength'   => 60,
+    '#required'    => FALSE,
   );
 
   $form['add']['url'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Target URL'),
+    '#type'        => 'textfield',
+    '#title'       => t('Target URL'),
     '#description' => t('The full URL to POST to. E.g. http://www.mycrm.com/form_handler.php'),
-    '#size' => 100,
-    '#maxlength' => 500,
-    '#required' => TRUE,
+    '#size'        => 100,
+    '#maxlength'   => 500,
+    '#required'    => TRUE,
   );
-//  $form['add']['type'] = array(
-//    '#type' => 'select',
-//    '#title' => t('Post Type'),
-//    '#options' => array(
-//       'x-www-form-urlencoded' => t('x-www-form-urlencoded'),
-//       'json' => t('JSON'),
-//    ),
-//    '#default_value' => 'x-www-form-urlencoded',
-//    '#description' => t('Use x-www-form-urlencoded if unsure, as it is the default format for HTML forms. You also have the option to post data in <a href="http://www.json.org/" target="_blank">JSON</a> format.'),
-//    '#required' => TRUE,
-//  );
+
   $form['add_button'] = array(
-    '#type' => 'submit',
-    '#value' => t('Add'),
+    '#type'   => 'submit',
+    '#value'  => t('Add'),
     '#weight' => 45,
   );
 
@@ -103,7 +96,14 @@ function webform_remote_post_targets_form($form, &$form_state, $webform_node) {
 function theme_webform_remote_post_targets_form($variables) {
   $form = $variables['form'];
   $webform_node = $form['#node'];
-  $header = array(t('Enabled'), t('Label'), t('Target URL'), t('Post Type'), array('data' => t('Operations'), 'colspan' => 2));
+  $header = array(
+    t('Enabled'),
+    t('Label'),
+    t('Target URL'),
+    t('Post Type'),
+    t('Mode'),
+    array('data' => t('Operations'), 'colspan' => 2)
+  );
   $rows = array();
 
   if (!empty($form['targets'])) {
@@ -114,6 +114,7 @@ function theme_webform_remote_post_targets_form($variables) {
         drupal_render($form['targets'][$tid]['label']),
         drupal_render($form['targets'][$tid]['url']),
         drupal_render($form['targets'][$tid]['type']),
+        drupal_render($form['targets'][$tid]['mode']),
         l(t('Edit'), 'node/' . $webform_node->nid . '/webform/targets/' . $tid),
         l(t('Delete'), 'node/' . $webform_node->nid . '/webform/targets/' . $tid . '/delete'),
       );
@@ -125,17 +126,22 @@ function theme_webform_remote_post_targets_form($variables) {
 
   // Add a row containing form elements for a new item.
   $row_data = array(
-    array('colspan' => 5, 'data' => drupal_render($form['add'])),
+    array('colspan' => 6, 'data' => drupal_render($form['add'])),
     array('colspan' => 1, 'data' => drupal_render($form['add_button'])),
   );
   $rows[] = array('data' => $row_data, 'class' => array('webform-remote-post-add-target-form'));
 
-  $output = '';
-  $output .= theme('table', array(
-    'header' => $header,
-    'rows' => $rows,
-    'attributes' => array('id' => 'webform-remote-post-targets')));
+  $output = theme(
+    'table',
+    array(
+      'header'     => $header,
+      'rows'       => $rows,
+      'attributes' => array('id' => 'webform-remote-post-targets')
+    )
+  );
+
   $output .= drupal_render_children($form);
+
   return $output;
 }
 
@@ -157,7 +163,15 @@ function webform_remote_post_targets_form_submit($form, &$form_state) {
   // individual remote post target edit settings form. Only the basic
   // fields are shown here. All advanced settings happen in the individual
   // remote post target settings form.
-  $form_state['redirect'] = array('node/' . $form['#node']->nid . '/webform/targets/new', array('query' => array('url' => $form_state['values']['add']['url'], 'label' => $form_state['values']['add']['label'])));
+  $form_state['redirect'] = array(
+    'node/' . $form['#node']->nid . '/webform/targets/new',
+    array(
+      'query' => array(
+        'url'   => $form_state['values']['add']['url'],
+        'label' => $form_state['values']['add']['label']
+      )
+    )
+  );
 }
 
 /**
@@ -208,16 +222,16 @@ function webform_remote_post_update_enabled_flag($form, $form_state) {
  * Load a remote target setting from the database or initialize a new remote target.
  */
 function webform_remote_post_target_load($tid, $nid) {
-
   if ($tid == 'new') {
     $target = array();
     if (isset($_GET['label']) && isset($_GET['url'])) {
       $target['label'] = $_GET['label'];
       $target['url']   = $_GET['url'];
     }
-  } else {
+  }
+  else {
     $target = db_select('webform_remote_post_targets')
-      ->fields('webform_remote_post_targets', array('nid', 'tid', 'url', 'label', 'enabled', 'type'))
+      ->fields('webform_remote_post_targets')
       ->condition('nid', $nid)
       ->condition('tid', $tid)
       ->execute()

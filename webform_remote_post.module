@@ -9,6 +9,10 @@
  * applications.
  */
 
+// Define pre/post save modes
+define('WEBFORM_REMOTE_POST_MODE_PRE', 2);
+define('WEBFORM_REMOTE_POST_MODE_POST', 1);
+
 /**
  * Implements hook_help().
  *
@@ -81,15 +85,7 @@ function webform_remote_post_menu() {
  * Implements hook_webform_submission_insert().
  *
  * Respond to a Webform submission being inserted.
- *
- * Note that this hook is called after a submission has already been saved to
- * the database.
- *
- * This is the main purpose of this module, to emit HTTP POSTs based on the
- * saved webform data.
- *
- * @todo Support of Grid component.
- * @todo Support of File component.
+ * Note: This hook fires POST save.
  */
 function webform_remote_post_webform_submission_insert($node, $submission) {
   // Skip draft forms:
@@ -103,9 +99,49 @@ function webform_remote_post_webform_submission_insert($node, $submission) {
     ->fields('webform_remote_post_targets')
     ->condition('nid', $node->nid)
     ->condition('enabled', 1)
+    ->condition('mode', WEBFORM_REMOTE_POST_MODE_POST)
     ->execute()
     ->fetchAllAssoc('tid', PDO::FETCH_ASSOC);
 
+    webform_remote_post_process_targets($node, $submission, $targets);
+}
+
+
+/**
+ * Implements hook_webform_submission_presave().
+ *
+ * Respond to a Webform submission being inserted.
+ * Note: This hook fires POST save.
+ */
+function webform_remote_post_webform_submission_presave($node, $submission) {
+  // Skip draft forms:
+  if ($submission->is_draft) {
+    return;
+  }
+
+  // Get this webform node remote targets from the DB:
+  $targets = array();
+  $targets = db_select('webform_remote_post_targets')
+    ->fields('webform_remote_post_targets')
+    ->condition('nid', $node->nid)
+    ->condition('enabled', 1)
+    ->condition('mode', WEBFORM_REMOTE_POST_MODE_PRE)
+    ->execute()
+    ->fetchAllAssoc('tid', PDO::FETCH_ASSOC);
+
+    webform_remote_post_process_targets($node, $submission, $targets);
+}
+
+
+/**
+ * Callback to fire off HTTP POST(s) to configured targets.
+ * This is leveraged by the implementations of both
+ * hook_webform_submission_insert() and hook_webform_submission_presave().
+ *
+ * @todo Support of Grid component.
+ * @todo Support of File component.
+ */
+function webform_remote_post_process_targets($node, $submission, $targets) {
   // Create a map with webform component ID's and the component themselves,
   // handy later on.
   $component_map = array();
@@ -117,7 +153,13 @@ function webform_remote_post_webform_submission_insert($node, $submission) {
   // array of form field names and the data.
   $payload = array();
   foreach ($submission->data as $cid => $component_data) {
-    $payload[$component_map[$cid]['form_key']] = implode(', ', $component_data);
+    // Handle different data structure for webform 4.x:
+    if (webform_remote_post_webform_version() == '4') {
+      $payload[$component_map[$cid]['form_key']] = implode(', ', $component_data);
+    }
+    else {
+      $payload[$component_map[$cid]['form_key']] = implode(', ', $component_data['value']);
+    }
   }
 
   // Acceptable server response codes.
@@ -125,6 +167,15 @@ function webform_remote_post_webform_submission_insert($node, $submission) {
 
   // Repost data to each target.
   foreach ($targets as $tid => $target) {
+    if ($target['extra']) {
+      $extra = unserialize($target['extra']);
+      $extra = explode("\n", $extra);
+      foreach ($extra as $k => $v) {
+        unset($extra[$k]);
+        $v = explode('|', $v);
+        $payload[$v[0]] = isset($v[1]) ? $v[1] : '';
+      }
+    }
     // Allow other modules to modify payload and target.
     drupal_alter('webform_remote_post_repost', $payload, $target);
 
@@ -209,4 +260,17 @@ function webform_remote_post_menu_target_load($tid, $nid) {
   watchdog('webform_remote_post',"The target id to load is $tid");
   watchdog('webform_remote_post','The auto-loaded target is ' . print_r($target, true));
   return $target;
+}
+
+/**
+ * Helper function to fetch webform major version number.
+ */
+function webform_remote_post_webform_version() {
+  $info = system_get_info('module', 'webform');
+  $version = $info['version'];
+  if ($version) {
+    $version = explode('-', $version);
+    $version = explode('.', $version[1]);
+    return $version[0];
+  }
 }
