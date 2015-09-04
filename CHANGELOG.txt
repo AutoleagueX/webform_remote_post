@@ -1,3 +1,11 @@
+Webform Remote Post 7.x-1.23 (Bugfix)
+----------------------------
+by apmsooner, enrique.delgado: Added missing method to fetch webform version.
+
+Webform Remote Post 7.x-1.22 (Bugfix)
+----------------------------
+#2556593 by apmsooner, enrique.delgado: Get form values in Webform 4 and 3 compatible ways.
+
 Webform Remote Post 7.x-1.21 (Bugfix)
 ----------------------------
 #2472749 by enrique.delgado: Fixed a bug. Missing array key.

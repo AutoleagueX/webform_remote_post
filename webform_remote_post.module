@@ -216,3 +216,16 @@ function webform_remote_post_menu_target_load($tid, $nid) {
   watchdog('webform_remote_post','The auto-loaded target is ' . print_r($target, true));
   return $target;
 }
+
+/**
+ * Helper function to fetch webform major version number.
+ */
+function webform_remote_post_webform_version() {
+  $info = system_get_info('module', 'webform');
+  $version = $info['version'];
+  if ($version) {
+    $version = explode('-', $version);
+    $version = explode('.', $version[1]);
+    return $version[0];
+  }
+}
