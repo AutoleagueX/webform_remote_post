@@ -1,0 +1,52 @@
+<?php
+
+/**
+ * Tests the functionality of the Webform Remote Post module.
+ */
+class WebformRemotePostTestCase extends DrupalWebTestCase {
+  protected $privileged_user;
+
+  /**
+   * Implements getInfo().
+   */
+  public static function getInfo() {
+    return array(
+      'name' => 'Webform Remote Post Target',
+      'description' => 'Can create a Webform and add a Webform Remote Post target to it.',
+      'group' => 'Webform Remote Post',
+    );
+  }
+
+  public function setUp() {
+    // Enable any modules required for the test. This should be an array of
+    // module names.
+    parent::setUp(array('webform_remote_post'));
+    // Create and log in our privileged user.
+    $this->privileged_user = $this->drupalCreateUser(array(
+      'create webform content',
+      'edit own webform content',
+      'admin webform remote posts',
+    ));
+    $this->drupalLogin($this->privileged_user);
+  }
+
+  public function testCanAddATarget() {
+    $this->drupalGet('node/add/webform');
+    $edit = array();
+    $edit['title'] = 'Sample Webform';
+    $this->drupalPost('node/add/webform', $edit, t('Save'));
+    $this->assertText(t('Webform Sample Webform has been created.'));
+    $this->clickLink('Remote Posts');
+    $this->assertText(t('No remote target URLs specified yet.'));
+    $edit = array(
+      'add[label]' => 'Request Bin',
+      'add[url]'   => 'http://requestb.in/1i7x5vo1'
+    );
+    $this->drupalPost(null, $edit,t('Add'));
+    $this->assertText('Edit remote post settings');
+    $this->drupalPost(null,[],t('Save remote post settings'));
+    $this->assertText('Request Bin');
+    $this->assertText('http://requestb.in/1i7x5vo1');
+  }
+
+}
