@@ -23,6 +23,7 @@ class WebformRemotePostTestCase extends DrupalWebTestCase {
     parent::setUp(array('webform_remote_post'));
     // Create and log in our privileged user.
     $this->privileged_user = $this->drupalCreateUser(array(
+      'access content',
       'create webform content',
       'edit own webform content',
       'admin webform remote posts',
