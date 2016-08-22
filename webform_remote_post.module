@@ -176,6 +176,8 @@ function webform_remote_post_webform_submission_insert($node, $submission) {
           '%type' => $target['type'],
         ),
         WATCHDOG_WARNING);
+
+        module_invoke_all('webform_remote_post_request_invalid', array('node' => $node, 'submission' => $submission, 'request' => $request, 'payload' => $payload) );
     }
   }
 }
