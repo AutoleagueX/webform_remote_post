@@ -44,7 +44,7 @@ class WebformRemotePostTestCase extends DrupalWebTestCase {
     );
     $this->drupalPost(null, $edit,t('Add'));
     $this->assertText('Edit remote post settings');
-    $this->drupalPost(null,[],t('Save remote post settings'));
+    $this->drupalPost(null, array(),t('Save remote post settings'));
     $this->assertText('Request Bin');
     $this->assertText('http://requestb.in/1i7x5vo1');
   }
