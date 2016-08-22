@@ -36,7 +36,8 @@ class WebformRemotePostTestCase extends DrupalWebTestCase {
     $edit['title'] = 'Sample Webform';
     $this->drupalPost('node/add/webform', $edit, t('Save'));
     $this->assertText(t('Webform Sample Webform has been created.'));
-    $this->clickLink('Remote Posts');
+    echo $this->drupalGetContent();
+    $this->clickLink(t('Remote Posts'));
     $this->assertText(t('No remote target URLs specified yet.'));
     $edit = array(
       'add[label]' => 'Request Bin',
