@@ -63,6 +63,11 @@ function webform_remote_post_schema() {
         'type' => 'text',
         'not null' => FALSE,
       ),
+      'referer' => array(
+        'description' => 'Value for the Referer header. $GLOBALS[\'base_url\'] will be used if this is left blank.',
+        'type' => 'text',
+        'not null' => FALSE
+      )
     ),
     'primary key' => array('nid', 'tid'),
   );
@@ -106,4 +111,16 @@ function webform_remote_post_update_7200() {
   foreach ($new_fields as $field => $schema) {
     db_add_field('webform_remote_post_targets', $field, $schema);
   }
+}
+
+/**
+ * Add referer
+  */
+function webform_remote_post_update_7210() {
+  $new_field = array(
+    'description' => 'Value for the Referer header. $GLOBALS[\'base_url\'] will be used if this is left blank.',
+    'type' => 'text',
+    'not null' => FALSE,
+  );
+  db_add_field('webform_remote_post_targets', 'referer', $new_field);
 }

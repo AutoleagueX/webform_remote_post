@@ -179,6 +179,11 @@ function webform_remote_post_process_targets($node, $submission, $targets) {
     // Allow other modules to modify payload and target.
     drupal_alter('webform_remote_post_repost', $payload, $target);
 
+    // Set default referer value if required
+    if (empty($target['referer'])) {
+      $target['referer'] = $GLOBALS['base_url'];
+    }
+
     if($target['type'] == 'json'){
       // JSON Encode the payload.
       $post_data = json_encode($payload);
@@ -189,7 +194,11 @@ function webform_remote_post_process_targets($node, $submission, $targets) {
         'method' => 'POST',
         'data' => $post_data,
         'timeout' => 15,
-        'headers' => array('Content-Type' => 'application/json', 'Accept' => '*/*'),
+        'headers' => array(
+          'Content-Type' => 'application/json',
+          'Accept' => '*/*',
+          'Referer' => $target['referer']
+        ),
       );
     }
     else {
@@ -202,7 +211,10 @@ function webform_remote_post_process_targets($node, $submission, $targets) {
         'method' => 'POST',
         'data' => $post_data,
         'timeout' => 15,
-        'headers' => array('Content-Type' => 'application/x-www-form-urlencoded'),
+        'headers' => array(
+          'Content-Type' => 'application/x-www-form-urlencoded',
+          'Referer' => $target['referer']
+        ),
       );
     }
 

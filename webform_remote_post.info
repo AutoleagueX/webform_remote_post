@@ -3,3 +3,5 @@ description = Post webform data (form submissions) to any arbitrary URL, presuma
 core = 7.x
 dependencies[] = webform
 package = Webform
+
+version = "7.x-2.1"

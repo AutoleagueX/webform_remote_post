@@ -50,6 +50,9 @@ function webform_remote_post_targets_form($form, &$form_state, $webform_node) {
    $form['targets'][$tid]['mode'] = array(
       '#markup' => ($data['mode'] == WEBFORM_REMOTE_POST_MODE_PRE) ? t('Pre-save') : t('Post-save'),
     );
+    $form['targets'][$tid]['referer'] = array(
+      '#markup' => check_plain($data['referer']),
+    );
   }
 
   // Form elements for a new remote post target. Actually rendered by
@@ -102,6 +105,7 @@ function theme_webform_remote_post_targets_form($variables) {
     t('Target URL'),
     t('Post Type'),
     t('Mode'),
+    t('Referer'),
     array('data' => t('Operations'), 'colspan' => 2)
   );
   $rows = array();
@@ -115,6 +119,7 @@ function theme_webform_remote_post_targets_form($variables) {
         drupal_render($form['targets'][$tid]['url']),
         drupal_render($form['targets'][$tid]['type']),
         drupal_render($form['targets'][$tid]['mode']),
+        drupal_render($form['targets'][$tid]['referer']),
         l(t('Edit'), 'node/' . $webform_node->nid . '/webform/targets/' . $tid),
         l(t('Delete'), 'node/' . $webform_node->nid . '/webform/targets/' . $tid . '/delete'),
       );
