@@ -4,4 +4,4 @@ core = 7.x
 dependencies[] = webform
 package = Webform
 
-version = "7.x-2.1"
+version = "7.x-2.2"

@@ -84,6 +84,7 @@ function webform_remote_post_target_edit_form($form, &$form_state, $webform_node
     '#description'   => t('Value for the Referer header. $GLOBALS[\'base_url\'] will be used if this is left blank.'),
     '#size'          => 100,
     '#maxlength'     => 500,
+    '#default_value' => $target['referer'],
   );
 
   $form['edit']['extra'] = array(
@@ -140,9 +141,11 @@ function webform_remote_post_target_edit_form_submit($form, &$form_state) {
   if (!empty($form_state['values']['edit']['extra'])) {
     $target['extra'] = serialize($form_state['values']['edit']['extra']);
   }
-  
+
   if (!empty($form_state['values']['edit']['referer'])) {
     $target['referer'] = trim($form_state['values']['edit']['referer']);
+  } else {
+    $target['referer'] = null;
   }
 
   // Required fields:
